@@ -635,17 +635,29 @@ _SCRIPT_TEMPLATE = r"""
         }, true);
     }  // end _ufFirstLoad
 
+    // Track the last processCard run to detect duplicate runs on the same page
+    // (e.g. {{FrontSide}} includes the front's UF script, then the back has its own).
+    var _ufRunId = window._ufRunId || 0;
+
     function processCard() {
-        // ---- Cleanup from previous card ----
-        // Remove stale tooltip portal so tooltips from the old card
-        // don't leak into the new one.
-        var oldPortal = document.getElementById('uf-tooltip-portal');
-        if (oldPortal) oldPortal.remove();
-        _tt.pinned = null;
-        _tt.hoverEl = null;
-        if (_tt.hoverTimer) { clearTimeout(_tt.hoverTimer); _tt.hoverTimer = null; }
-        _ufTooltipId = 0;
-        _ufPageCache = {};
+        // If this page has already been processed by another UF script instance
+        // (e.g. front's script already ran via {{FrontSide}}), skip cleanup
+        // and only process any remaining unprocessed annotations.
+        var isDuplicateRun = (window._ufRunId === _ufRunId && _ufRunId > 0);
+        window._ufRunId = ++_ufRunId;
+
+        if (!isDuplicateRun) {
+            // ---- Cleanup from previous card ----
+            // Remove stale tooltip portal so tooltips from the old card
+            // don't leak into the new one.
+            var oldPortal = document.getElementById('uf-tooltip-portal');
+            if (oldPortal) oldPortal.remove();
+            _tt.pinned = null;
+            _tt.hoverEl = null;
+            if (_tt.hoverTimer) { clearTimeout(_tt.hoverTimer); _tt.hoverTimer = null; }
+            _ufTooltipId = 0;
+            _ufPageCache = {};
+        }
         _cachedDarkMode = isDarkMode();
 
         _ufProcessing = true;
